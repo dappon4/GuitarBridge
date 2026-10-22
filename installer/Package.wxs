@@ -1,0 +1,55 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Guitar Bridge" Manufacturer="GuitarBridge" Version="$(var.Version)"
+           UpgradeCode="AF74CED2-38F8-4820-8C7C-37294AD5D689" Scope="perMachine" InstallerVersion="500">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Guitar Bridge is already installed."
+                  AllowSameVersionUpgrades="yes" Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <!-- Never force-close an app that may own a live audio driver. -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/dappon4/GuitarBridge" />
+    <Icon Id="AppIcon" SourceFile="$(var.SourceDir)\assets\GuitarBridge.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="GuitarBridge">
+        <Component Id="Application" Guid="*" Bitness="always64">
+          <File Id="GuitarBridgeExe" Source="$(var.PublishDir)\GuitarBridge.exe" KeyPath="yes">
+            <Shortcut Id="StartMenuShortcut" Directory="ApplicationProgramsFolder" Name="Guitar Bridge"
+                      WorkingDirectory="INSTALLFOLDER" Advertise="yes" Icon="AppIcon" />
+          </File>
+        </Component>
+        <Component Id="Readme" Guid="*"><File Source="$(var.PublishDir)\README.md" /></Component>
+        <Component Id="ProjectLicense" Guid="*"><File Source="$(var.PublishDir)\LICENSE" /></Component>
+        <Component Id="ThirdPartyNotices" Guid="*"><File Source="$(var.PublishDir)\THIRD_PARTY_NOTICES.md" /></Component>
+        <Directory Id="LicenseFolder" Name="licenses">
+          <Component Id="NAudioLicense" Guid="*"><File Source="$(var.PublishDir)\licenses\NAudio.txt" /></Component>
+          <Component Id="MaterialDesignLicense" Guid="*"><File Source="$(var.PublishDir)\licenses\MaterialDesign.txt" /></Component>
+          <Component Id="XamlBehaviorsLicense" Guid="*"><File Source="$(var.PublishDir)\licenses\XamlBehaviors.txt" /></Component>
+          <Component Id="DotnetLicense" Guid="*"><File Source="$(var.PublishDir)\licenses\dotnet.txt" /></Component>
+          <Component Id="DotnetThirdPartyLicense" Guid="*"><File Source="$(var.PublishDir)\licenses\dotnet-third-party.txt" /></Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Guitar Bridge">
+        <Component Id="StartMenuFolder" Guid="*" Bitness="always64">
+          <RemoveFolder Id="RemoveStartMenuFolder" On="uninstall" />
+          <RegistryValue Root="HKLM" Key="Software\GuitarBridge" Name="Installed" Value="1" Type="integer" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+    <Feature Id="MainFeature" Title="Guitar Bridge" Level="1">
+      <ComponentRef Id="Application" />
+      <ComponentRef Id="Readme" />
+      <ComponentRef Id="ProjectLicense" />
+      <ComponentRef Id="ThirdPartyNotices" />
+      <ComponentRef Id="NAudioLicense" />
+      <ComponentRef Id="MaterialDesignLicense" />
+      <ComponentRef Id="XamlBehaviorsLicense" />
+      <ComponentRef Id="DotnetLicense" />
+      <ComponentRef Id="DotnetThirdPartyLicense" />
+      <ComponentRef Id="StartMenuFolder" />
+    </Feature>
+  </Package>
+</Wix>
