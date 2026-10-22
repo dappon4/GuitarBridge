@@ -2,7 +2,7 @@
 
 GuitarBridge is licensed under the MIT license. Third-party components retain
 their own copyright notices and license terms, included in `licenses/` and in
-the portable ZIP and MSI packages.
+the portable EXE and MSI packages.
 
 | Component | Version | License / notice |
 | --- | --- | --- |
