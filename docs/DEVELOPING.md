@@ -68,6 +68,20 @@ See [signing options and build order](SIGNING.md).
 
 ## Update testing
 
+`--default-output-tests <report>` exercises Windows playback-default switching
+using simulated devices: per-role capture/restore, startup failure, partial
+switch failure, manual overrides, disconnected originals, and crash recovery.
+Host checks also verify switching on successful routing and restoration on
+fault/stop and Quit. No real Windows defaults change in automated CI checks.
+
+For an explicit manual Windows integration check, `--default-output-probe
+<report>` briefly switches playback defaults to another available device and
+restores them in a `finally` block. This is not run by the automated test script.
+The implementation uses Windows' private IPolicyConfig COM interface; failures
+are reported and routing is stopped if switching fails. Recovery data remains
+in local application data, never in the source repository. Only Console and
+Multimedia roles change; Communications and per-app routes are left alone.
+
 `--update-tests <report>` uses synthetic HTTP responses and temporary files to
 check release/version selection, download source validation, checksums,
 corruption, cancellation, missing releases, and portable replacement. It never

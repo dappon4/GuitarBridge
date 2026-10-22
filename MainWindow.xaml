@@ -75,7 +75,7 @@
      <ComboBox x:Name="Buffers" Grid.Column="2" md:HintAssist.Hint="Buffer (ms)" Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
     </Grid>
     <CheckBox x:Name="Exclusive" Content="Exclusive output" IsChecked="False" Margin="0,10,0,4" ToolTip="Leave off to hear guitar alongside YouTube and other apps. On: reserves the speakers for guitar routing only."/>
-    <TextBlock Text="Hover over ⓘ for setup and latency tips." Foreground="#CAC4D0" FontSize="12" Margin="0,8,0,0"/>
+    <CheckBox x:Name="SwitchWindowsOutput" Content="Switch Windows output while routing" FontSize="12" IsChecked="True" Margin="0,8,0,0" ToolTip="Temporarily make this device the Windows playback default after routing starts. Restore the previous output on stop or Quit. Apps with their own output selection are unchanged."/>
    </StackPanel></Border>
   </Grid>
   <StackPanel Grid.Row="3">

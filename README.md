@@ -22,6 +22,8 @@ Requires Windows 10/11 x64, an installed ASIO input driver, and a working Window
 
 Shared output is the default, so guitar routing can play alongside YouTube and other Windows apps. Leave Exclusive output off for this behavior. Enabling it reserves the selected output device for guitar routing. If your ASIO driver also opens Windows speaker devices, leave the selected output available to Windows.
 
+**Switch Windows output while routing** temporarily makes the selected device the Windows playback default after routing starts successfully. Stopping routing, an audio fault, or Quit restores the previous playback defaults. Turn this checkbox off to leave Windows defaults alone. Communications devices and app-specific output overrides are unchanged. Apps that follow the Windows default can follow this switch; some apps may need playback restarted. If you manually change Windows output during routing, your new selection is preserved. An unavailable original device is reported, and recovery is retried on the next launch. Closing the window to the tray keeps routing and the temporary output active.
+
 Shared output now uses IAudioClient3 when supported, selects a legal engine period near the requested buffer value, and queues only the next engine period. The status shows the selected period and output queue instead of treating the requested value as actual latency. Optional per-stream effects are bypassed where raw mode is supported; Windows' always-on speaker processing remains. Unsupported devices or formats automatically use the compatibility output path. The 2 and 3 ms choices are useful only when the output driver supports smaller periods.
 
 ## Window and tray controls

@@ -61,6 +61,8 @@ public static class SelfTests
             if (!client.Running) throw new Exception("Could not restart after a stalled stop.");
             try { await client.StopAsync(); } catch (TimeoutException) { }
             var testWindow = new MainWindow(false, new AudioHostClient(testStopHang: true));
+            var defaultPolicy = new DefaultOutputTests.FakePolicy();
+            testWindow.DefaultOutputs = new DefaultOutputRouting(defaultPolicy);
             testWindow.Drivers.ItemsSource = new[] { "Simulated ASIO driver" };
             testWindow.Drivers.SelectedIndex = 0;
             testWindow.Outputs.ItemsSource = new[] { new OutputChoice("test-output", "Test speakers") };
@@ -69,6 +71,7 @@ public static class SelfTests
             testWindow.Channels.SelectedIndex = 0;
             testWindow.Volume.Value = 150;
             await testWindow.StartRoutingAsync();
+            if (defaultPolicy.Get(NAudio.CoreAudioApi.Role.Console) != "test-output") throw new Exception("Successful routing did not switch Windows output.");
             if (!testWindow.IsRouting || testWindow.RouteButton.IsChecked != true)
                 throw new Exception("Window did not allow the selected ASIO input.");
             testWindow.UpdateInstallState();
@@ -79,6 +82,7 @@ public static class SelfTests
             const string originalError = "Original audio test error";
             testWindow.ShowError(originalError);
             await testWindow.StopRoutingAsync(originalError);
+            if (defaultPolicy.Get(NAudio.CoreAudioApi.Role.Console) != "original-console") throw new Exception("Routing fault did not restore Windows output.");
             testWindow.UpdateInstallState();
             if (!testWindow.InstallUpdateButton.IsEnabled) throw new Exception("Update controls did not recover after routing stopped.");
             if (!testWindow.RouteButton.IsEnabled || !testWindow.RefreshButton.IsEnabled || !testWindow.RouteSettings.IsEnabled || testWindow.RouteButton.IsChecked == true)
@@ -87,7 +91,10 @@ public static class SelfTests
             await testWindow.StartRoutingAsync();
             if (!testWindow.IsRouting) throw new Exception("Window could not restart routing after recovery.");
             await testWindow.ExitAsync();
+            if (defaultPolicy.Get(NAudio.CoreAudioApi.Role.Console) != "original-console") throw new Exception("Quit did not restore Windows output.");
             var startupWindow = new MainWindow(false, new AudioHostClient(startupTimeout: TimeSpan.FromSeconds(1), testStartHang: true));
+            var startupPolicy = new DefaultOutputTests.FakePolicy();
+            startupWindow.DefaultOutputs = new DefaultOutputRouting(startupPolicy);
             startupWindow.Drivers.ItemsSource = new[] { "Simulated ASIO driver" };
             startupWindow.Drivers.SelectedIndex = 0;
             startupWindow.Outputs.ItemsSource = new[] { new OutputChoice("test-output", "Test output") };
@@ -95,6 +102,7 @@ public static class SelfTests
             startupWindow.Channels.ItemsSource = new[] { new ChannelChoice(0, "1 · Test input") };
             startupWindow.Channels.SelectedIndex = 0;
             await startupWindow.StartRoutingAsync();
+            if (startupPolicy.Changes != 0) throw new Exception("Failed startup changed Windows output.");
             if (!startupWindow.WarningPopupText.Text.Contains("Simulated output") || !startupWindow.RouteSettings.IsEnabled || !startupWindow.RouteButton.IsEnabled)
                 throw new Exception("Startup timeout did not report its stage and restore controls.");
             await startupWindow.ExitAsync();

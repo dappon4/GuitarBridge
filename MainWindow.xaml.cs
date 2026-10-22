@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Linq;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
     private bool changingRoute;
     private bool startingRoute;
     private readonly bool persistSettings;
+    internal DefaultOutputRouting? DefaultOutputs { get; set; }
     public event Action<bool>? RoutingChanged;
     public event Action<string>? RoutingError;
     public bool IsRouting => bridge.Running;
@@ -31,6 +33,7 @@ public partial class MainWindow : Window
     {
         audio = audioClient ?? new AudioHostClient();
         this.persistSettings = persistSettings;
+        DefaultOutputs = persistSettings ? new DefaultOutputRouting(new WindowsDefaultOutputPolicy(), Path.Combine(Settings.Folder, "output-restore.json")) : null;
         settings = persistSettings ? Settings.Load() : new Settings();
         InitializeComponent();
         Width = Math.Min(Width, SystemParameters.WorkArea.Width - 24);
@@ -47,6 +50,7 @@ public partial class MainWindow : Window
         Volume.Value = OutputLevel.Normalize((float)settings.Volume) * 100;
         AutoStart.IsChecked = settings.AutoStart;
         AutomaticUpdates.IsChecked = settings.CheckForUpdates;
+        SwitchWindowsOutput.IsChecked = settings.SwitchWindowsOutput;
         UpdateVersionText.Text = "Installed version " + UpdateService.DisplayVersion;
         RefreshDevices();
         ready = true;
@@ -55,7 +59,12 @@ public partial class MainWindow : Window
         timer.Start();
         Closing += OnClosing;
     }
-    public void StartSavedRoute() { if (settings.AutoStart) StartRouting(); }
+    public async void StartSavedRoute(bool allowAutoStart = true)
+    {
+        try { if (DefaultOutputs != null) await DefaultOutputs.RestoreAsync(); }
+        catch (Exception ex) { ShowError(ex.Message); return; }
+        if (!exiting && allowAutoStart && settings.AutoStart) StartRouting();
+    }
     private void RefreshDevices()
     {
         try
@@ -122,13 +131,14 @@ public partial class MainWindow : Window
         settings.Volume = Volume.Value / 100;
         settings.AutoStart = AutoStart.IsChecked == true;
         settings.CheckForUpdates = AutomaticUpdates.IsChecked == true;
+        settings.SwitchWindowsOutput = SwitchWindowsOutput.IsChecked == true;
         if (persistSettings) settings.Save();
     }
-    public void ToggleRouting() { if (changingRoute || applyingUpdate) return; if (bridge.Running) StopRouting(); else StartRouting(); }
+    public void ToggleRouting() { if (changingRoute || applyingUpdate || exiting) return; if (bridge.Running) StopRouting(); else StartRouting(); }
     public async void StartRouting() => await StartRoutingAsync();
     public async Task StartRoutingAsync()
     {
-        if (changingRoute || applyingUpdate) return;
+        if (changingRoute || applyingUpdate || exiting) return;
         changingRoute = true;
         startingRoute = true;
         RouteButton.IsEnabled = false;
@@ -142,7 +152,12 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("Click Scan channels, then select the input you want to monitor. If it is missing, enable the input in your ASIO driver's control panel.");
             if (string.IsNullOrEmpty(settings.OutputId)) throw new InvalidOperationException("Select an output device first.");
             StatusLabel.Text = "Starting routing…";
+            if (settings.SwitchWindowsOutput && DefaultOutputs != null) await DefaultOutputs.PrepareAsync(settings.OutputId);
+            if (exiting) throw new OperationCanceledException("The app is closing.");
             await audio.StartAsync(settings);
+            if (exiting) throw new OperationCanceledException("The app is closing.");
+            if (settings.SwitchWindowsOutput && DefaultOutputs != null) await DefaultOutputs.ActivateAsync();
+            if (exiting) throw new OperationCanceledException("The app is closing.");
             if (bridge.Buffer is { } buffer) buffer.Gain = (float)Volume.Value / 100;
             RouteSettings.IsEnabled = false;
             RefreshButton.IsEnabled = false;
@@ -151,7 +166,15 @@ public partial class MainWindow : Window
             StatusDetail.Text = $"{bridge.AsioFrames} ASIO samples · {settings.SampleRate / 1000.0:0.#} kHz input\n{bridge.OutputFormat}";
             RoutingChanged?.Invoke(true);
         }
-        catch (Exception ex) { RouteButton.IsChecked = false; ShowError(ex.Message); }
+        catch (Exception ex)
+        {
+            string message = ex.Message;
+            try { if (bridge.Running) await audio.StopAsync(); } catch (Exception cleanup) { message += "\n\n" + cleanup.Message; }
+            try { if (DefaultOutputs != null) await DefaultOutputs.RestoreAsync(); } catch (Exception restore) { message += "\n\n" + restore.Message; }
+            RouteButton.IsChecked = false;
+            ShowError(message);
+            RoutingChanged?.Invoke(false);
+        }
         finally
         {
             startingRoute = false;
@@ -174,6 +197,7 @@ public partial class MainWindow : Window
         catch (Exception ex) { ShowError(originalFault == null ? ex.Message : originalFault + "\n\n" + ex.Message); }
         finally
         {
+            await RestoreWindowsOutputAsync();
             changingRoute = false;
             RouteButton.IsEnabled = true;
             RouteSettings.IsEnabled = true;
@@ -261,6 +285,21 @@ public partial class MainWindow : Window
         timer.Stop();
         try { SaveSettings(); } catch { }
         // Do not keep the tray app stuck open if a native driver refuses to stop.
-        try { await Task.WhenAny(audio.CloseAsync(), Task.Delay(2000)); } finally { Close(); }
+        try
+        {
+            if (!changingRoute && bridge.Running) { try { await audio.StopAsync(); } catch { } }
+            await Task.WhenAny(audio.CloseAsync(), Task.Delay(2000));
+        }
+        finally { await RestoreWindowsOutputAsync(); Close(); }
+    }
+
+    private async Task RestoreWindowsOutputAsync()
+    {
+        try { if (DefaultOutputs != null) await DefaultOutputs.RestoreAsync(); }
+        catch (Exception ex)
+        {
+            string original = WarningButton.Visibility == Visibility.Visible ? WarningTipText.Text + "\n\n" : "";
+            ShowError(original + ex.Message);
+        }
     }
 }

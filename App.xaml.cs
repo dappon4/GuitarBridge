@@ -22,6 +22,11 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Length == 2 && (e.Args[0] == "--default-output-tests" || e.Args[0] == "--default-output-probe"))
+        {
+            RunDefaultOutputTests(e.Args[1], e.Args[0] == "--default-output-probe");
+            return;
+        }
         if (e.Args.Length == 2 && e.Args[0] == "--apply-update")
         {
             RunUpdateWorker(e.Args[1]);
@@ -175,7 +180,7 @@ public partial class App : System.Windows.Application
         else
         {
             window.StartUpdateChecks();
-            if (Array.IndexOf(e.Args, "--no-auto-start") < 0) window.StartSavedRoute();
+            window.StartSavedRoute(Array.IndexOf(e.Args, "--no-auto-start") < 0);
         }
     }
 
@@ -194,6 +199,12 @@ public partial class App : System.Windows.Application
     private async void RunUpdateTests(string resultPath)
     {
         try { File.WriteAllText(resultPath, await UpdateTests.RunAsync()); Shutdown(0); }
+        catch (Exception ex) { File.WriteAllText(resultPath, ex.ToString()); Shutdown(1); }
+    }
+
+    private async void RunDefaultOutputTests(string resultPath, bool hardware)
+    {
+        try { File.WriteAllText(resultPath, hardware ? await DefaultOutputTests.ProbeAsync(resultPath + ".restore.json") : await DefaultOutputTests.RunAsync()); Shutdown(0); }
         catch (Exception ex) { File.WriteAllText(resultPath, ex.ToString()); Shutdown(1); }
     }
 
