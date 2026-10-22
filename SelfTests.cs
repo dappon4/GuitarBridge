@@ -47,7 +47,7 @@ public static class SelfTests
             int gainMessages = client.GainMessagesSent;
             await Task.Delay(150);
             if (gainMessages == 0 || client.GainMessagesSent != gainMessages) throw new Exception("Unchanged gain generated repeated control messages.");
-            client.Buffer!.Gain = 0.25f;
+            client.Buffer!.Gain = 4.5f;
             await Task.Delay(150);
             if (client.GainMessagesSent != gainMessages + 1) throw new Exception("A gain change was lost or repeatedly transmitted.");
             int beforeStop = ticks;
@@ -69,7 +69,7 @@ public static class SelfTests
             testWindow.Outputs.SelectedIndex = 0;
             testWindow.Channels.ItemsSource = new[] { new ChannelChoice(0, "1 · Microphone Array input 1") };
             testWindow.Channels.SelectedIndex = 0;
-            testWindow.Volume.Value = 150;
+            testWindow.Volume.Value = 450;
             await testWindow.StartRoutingAsync();
             if (defaultPolicy.Get(NAudio.CoreAudioApi.Role.Console) != "test-output") throw new Exception("Successful routing did not switch Windows output.");
             if (!testWindow.IsRouting || testWindow.RouteButton.IsChecked != true)
@@ -77,8 +77,8 @@ public static class SelfTests
             testWindow.UpdateInstallState();
             if (testWindow.InstallUpdateButton.IsEnabled || !Equals(testWindow.InstallUpdateButton.Content, "Stop routing to update"))
                 throw new Exception("An update could interrupt active routing.");
-            if (testWindow.Volume.Maximum != 200 || testWindow.VolumeLabel.Text != "150%" || Math.Abs(testWindow.IsRouting ? testWindow.Volume.Value - 150 : 1) > 0.001)
-                throw new Exception("The boost control did not preserve the selected 150% output level.");
+            if (testWindow.Volume.Maximum != 500 || testWindow.VolumeLabel.Text != "450%" || Math.Abs(testWindow.IsRouting ? testWindow.Volume.Value - 450 : 1) > 0.001)
+                throw new Exception("The boost control did not preserve the selected 450% output level.");
             const string originalError = "Original audio test error";
             testWindow.ShowError(originalError);
             await testWindow.StopRoutingAsync(originalError);
@@ -157,24 +157,24 @@ public static class SelfTests
     {
         var results = new List<string>();
         void Check(bool ok, string name) { if (!ok) throw new Exception("FAIL: " + name); results.Add("PASS: " + name); }
-        var gainControl = new AudioTelemetry { Gain = 1.5f };
-        Check(gainControl.Gain == 1.5f && OutputLevel.Normalize(9) == 2 && OutputLevel.Normalize(float.NaN) == 0,
-            "Gain controls allow boost to 200% and reject invalid gain values");
-        var boosted = new BridgeBuffer(48000, 128) { Gain = 2 };
+        var gainControl = new AudioTelemetry { Gain = 4.5f };
+        Check(gainControl.Gain == 4.5f && OutputLevel.Normalize(9) == 5 && OutputLevel.Normalize(float.NaN) == 0,
+            "Gain controls allow boost to 500% and reject invalid gain values");
+        var boosted = new BridgeBuffer(48000, 128) { Gain = 5 };
         var quietInput = new float[512];
-        for (int i = 0; i < 256; i++) { quietInput[i * 2] = 0.2f; quietInput[i * 2 + 1] = -0.1f; }
+        for (int i = 0; i < 256; i++) { quietInput[i * 2] = 0.08f; quietInput[i * 2 + 1] = -0.04f; }
         boosted.Push(quietInput, 256, 2);
         var boostedOutput = new float[128]; boosted.Read(boostedOutput, 0, boostedOutput.Length);
         Check(Math.Abs(boostedOutput[0] - 0.4f) < 0.00001 && Math.Abs(boostedOutput[1] + 0.2f) < 0.00001 && boosted.LimiterReductionDb == 0,
-            "200% doubles quiet audio without altering stereo balance or engaging the limiter");
-        boosted = new BridgeBuffer(48000, 128) { Gain = 2 };
+            "500% multiplies quiet audio by five without altering stereo balance or engaging the limiter");
+        boosted = new BridgeBuffer(48000, 128) { Gain = 5 };
         for (int i = 0; i < 256; i++) { quietInput[i * 2] = 0.75f; quietInput[i * 2 + 1] = -0.375f; }
         boosted.Push(quietInput, 256, 2); boosted.Read(boostedOutput, 0, boostedOutput.Length);
         bool safeStereo = true;
         for (int i = 0; i < 64; i++)
             safeStereo &= float.IsFinite(boostedOutput[i * 2]) && Math.Abs(boostedOutput[i * 2]) <= 1 &&
                 Math.Abs(boostedOutput[i * 2 + 1]) <= 1 && Math.Abs(boostedOutput[i * 2 + 1] + boostedOutput[i * 2] / 2) < 0.000001;
-        Check(safeStereo && boosted.LimiterReductionDb > 3, "Boost limiting contains peaks immediately and links both stereo channels");
+        Check(safeStereo && boosted.LimiterReductionDb > 11, "500% boost limiting contains peaks immediately and links both stereo channels");
         var releaseLimiter = new OutputLimiter(48000);
         float limitLeft = 2, limitRight = -1;
         releaseLimiter.Process(ref limitLeft, ref limitRight);

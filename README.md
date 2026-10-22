@@ -30,7 +30,7 @@ Shared output now uses IAudioClient3 when supported, selects a legal engine peri
 
 The switch position shows routing state. Refresh reloads devices while routing is stopped. Hover over the information icon for setup tips. When attention is needed, hover over the warning icon for the full message or click it to open a details panel.
 
-Output level ranges from 0% to 200%. 100% is unity gain; 200% doubles the guitar signal amplitude (about +6 dB). Boost is most useful for quiet signals. A stereo-linked peak limiter reduces gain when needed to contain boosted peaks, and the meter text shows limiter attenuation while it is active. Boost cannot recover detail already clipped at the source or guarantee twice the perceived loudness. The limiter uses no additional audio buffer. The saved level is preserved when updating.
+Output level ranges from 0% to 500%. 100% is unity gain; 500% multiplies the guitar signal amplitude by five (about +14 dB). Boost is most useful for quiet signals. A stereo-linked peak limiter reduces gain when needed to contain boosted peaks, and the meter text shows limiter attenuation while it is active. Boost cannot recover detail already clipped at the source or guarantee five times the perceived loudness. The limiter uses no additional audio buffer. The saved level is preserved when updating.
 
 Drag the app heading to move the window. The close button hides the window and keeps routing active. Right-click the tray icon to stop routing or quit. Windows controls whether the tray icon appears directly in the notification area or inside its overflow arrow.
 

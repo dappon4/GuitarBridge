@@ -4,7 +4,7 @@ namespace GuitarBridge;
 
 internal static class OutputLevel
 {
-    public const int MaximumPercent = 200;
+    public const int MaximumPercent = 500;
     public const float MaximumGain = MaximumPercent / 100f;
     public static float Normalize(float value) => float.IsFinite(value) ? Math.Clamp(value, 0, MaximumGain) : 0;
 }
