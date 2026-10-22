@@ -16,6 +16,7 @@ public sealed class Settings
     public bool Exclusive { get; set; }
     public double Volume { get; set; } = 0.5;
     public bool AutoStart { get; set; }
+    public bool CheckForUpdates { get; set; } = true;
     public static string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GuitarBridge");
     public static Settings Load()
     {

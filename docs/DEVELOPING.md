@@ -4,14 +4,15 @@ Use Windows 10/11 x64, PowerShell, and the .NET 8 SDK. NuGet restores the
 application dependencies. The SDK is not committed or required beside the app.
 
 ```powershell
-./build.ps1 -Version 0.1.0
+./build.ps1
 ./scripts/test.ps1
-./scripts/package.ps1 -Version 0.1.0
+./scripts/package.ps1
 ```
 
 `build.ps1` accepts `-DotnetPath` to select an SDK and `-OutputDirectory` to
 select an output folder. Defaults work with `dotnet` on PATH. `global.json`
 allows current .NET 8 feature-band and security updates.
+The default version comes from `GuitarBridge.csproj`; `-Version` overrides it.
 
 The published EXE is `artifacts/publish/GuitarBridge.exe`. Packaging creates
 `artifacts/release/GuitarBridge-<version>-win-x64.exe`, the matching `.msi`,
@@ -46,14 +47,16 @@ Pushes to `main`, pull requests, and manual dispatch build and test both Windows
 downloads. Open a successful run and download its `GuitarBridge-...-win-x64`
 artifact. Check results are uploaded separately, including logs after failures.
 
-For a release, choose a new three-part version, create a tag such as `v0.1.0`,
-and push it. The same workflow builds/tests the tag and publishes a GitHub
-Release with the EXE, MSI, and checksums. The release job uses the built-in
-GitHub token; no personal access token or signing certificate is required.
+For a release, increase the three-part version in `GuitarBridge.csproj` and
+push to `main`. After all checks pass, the workflow creates a matching version
+tag and public GitHub Release with the EXE, MSI, and checksums. It skips releases
+that already exist; never replace an existing release's downloads. You can
+also push an explicit version tag. The release job uses the built-in GitHub
+token; no personal access token or signing certificate is required.
 
 ```powershell
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.2
+git push origin v0.1.2
 ```
 
 Versions must have major/minor <=255 and patch <=65535 for MSI compatibility.
@@ -61,6 +64,25 @@ CI artifacts and releases are unsigned unless a maintainer adds a code-signing
 step. Windows may show publisher/reputation prompts; a successful CI build does
 not imply a trusted Authenticode signature. Do not disable Windows security
 features as part of installation instructions.
+See [signing options and build order](SIGNING.md).
+
+## Update testing
+
+`--update-tests <report>` uses synthetic HTTP responses and temporary files to
+check release/version selection, download source validation, checksums,
+corruption, cancellation, missing releases, and portable replacement. It never
+downloads or executes a real update. The normal app and its audio child process
+do not share update operations. Installation is disabled while routing starts,
+runs, or stops. The updater waits for the GUI process to exit before modifying
+the app and does not terminate an active audio process.
+
+The app reads only stable releases from `dappon4/GuitarBridge`. Each must include
+the versioned Windows EXE and MSI and `SHA256SUMS.txt`. The client compares the
+three-part release version with the running assembly version, accepts downloads
+only under this project's HTTPS release URL, and verifies file size and SHA-256
+before starting a helper. MSI installs retain Windows' permission prompts;
+portable updates require write access to the app's folder. Audio settings stay
+under local application data across both update paths.
 
 Actions are pinned to immutable upstream commits. Update their pins and the
 WiX tool version deliberately. WiX is a build tool with its own license;

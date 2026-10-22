@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Build version (major.minor.patch)'
-        required: true
-        default: '0.1.0'
+        description: 'Optional version override (major.minor.patch)'
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -39,7 +39,8 @@ jobs:
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
         run: |
-          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME -replace '^v','' } elseif ($env:REQUESTED_VERSION) { $env:REQUESTED_VERSION } else { '0.1.0' }
+          $projectVersion = ([xml](Get-Content ./GuitarBridge.csproj -Raw)).Project.PropertyGroup.Version
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME -replace '^v','' } elseif ($env:REQUESTED_VERSION) { $env:REQUESTED_VERSION } else { $projectVersion }
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Use a version such as 0.1.0 or a tag such as v0.1.0.' }
           $parts = $version.Split('.') | ForEach-Object { [int]$_ }
           if ($parts[0] -gt 255 -or $parts[1] -gt 255 -or $parts[2] -gt 65535) { throw 'Version exceeds Windows Installer limits.' }
@@ -83,7 +84,7 @@ jobs:
           retention-days: 7
 
   release:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -98,4 +99,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release create "$GITHUB_REF_NAME" release/*.exe release/*.msi release/SHA256SUMS.txt --verify-tag --title "Guitar Bridge $GITHUB_REF_NAME" --generate-notes
+          BUILD_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          tag="v$BUILD_VERSION"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; bump the project version to publish another update."
+            exit 0
+          fi
+          gh release create "$tag" release/*.exe release/*.msi release/SHA256SUMS.txt --target "$GITHUB_SHA" --title "Guitar Bridge $tag" --generate-notes --latest

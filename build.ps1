@@ -1,12 +1,13 @@
 [CmdletBinding()]
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '0.1.0',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
     [ValidateSet('Debug','Release')][string]$Configuration = 'Release',
     [string]$DotnetPath = 'dotnet',
     [string]$OutputDirectory = (Join-Path $PSScriptRoot 'artifacts\publish')
 )
 $ErrorActionPreference = 'Stop'
 $project = Join-Path $PSScriptRoot 'GuitarBridge.csproj'
+if (-not $Version) { $Version = ([xml](Get-Content -LiteralPath $project -Raw)).Project.PropertyGroup.Version }
 & $DotnetPath publish $project --configuration $Configuration --runtime win-x64 --self-contained true --output $OutputDirectory "-p:Version=$Version" -p:UseSharedCompilation=false -p:ContinuousIntegrationBuild=true
 if ($LASTEXITCODE -ne 0) { throw 'Application publish failed.' }
 foreach ($name in @('README.md','LICENSE','THIRD_PARTY_NOTICES.md')) {

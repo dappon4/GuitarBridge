@@ -1,12 +1,13 @@
 [CmdletBinding()]
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '0.1.0',
+    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
     [string]$DotnetPath = 'dotnet',
     [string]$PublishDirectory,
     [string]$OutputDirectory
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
+if (-not $Version) { $Version = ([xml](Get-Content -LiteralPath (Join-Path $repoRoot 'GuitarBridge.csproj') -Raw)).Project.PropertyGroup.Version }
 if (-not $PublishDirectory) { $PublishDirectory = Join-Path $repoRoot 'artifacts\publish' }
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot 'artifacts\release' }
 $parts = $Version.Split('.') | ForEach-Object { [int]$_ }

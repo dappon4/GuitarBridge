@@ -46,6 +46,8 @@ public partial class MainWindow : Window
         Volume.Maximum = OutputLevel.MaximumPercent;
         Volume.Value = OutputLevel.Normalize((float)settings.Volume) * 100;
         AutoStart.IsChecked = settings.AutoStart;
+        AutomaticUpdates.IsChecked = settings.CheckForUpdates;
+        UpdateVersionText.Text = "Installed version " + UpdateService.DisplayVersion;
         RefreshDevices();
         ready = true;
         timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -119,13 +121,14 @@ public partial class MainWindow : Window
         settings.BufferMs = Buffers.SelectedItem is int b ? b : 10;
         settings.Volume = Volume.Value / 100;
         settings.AutoStart = AutoStart.IsChecked == true;
+        settings.CheckForUpdates = AutomaticUpdates.IsChecked == true;
         if (persistSettings) settings.Save();
     }
-    public void ToggleRouting() { if (changingRoute) return; if (bridge.Running) StopRouting(); else StartRouting(); }
+    public void ToggleRouting() { if (changingRoute || applyingUpdate) return; if (bridge.Running) StopRouting(); else StartRouting(); }
     public async void StartRouting() => await StartRoutingAsync();
     public async Task StartRoutingAsync()
     {
-        if (changingRoute) return;
+        if (changingRoute || applyingUpdate) return;
         changingRoute = true;
         startingRoute = true;
         RouteButton.IsEnabled = false;
@@ -188,6 +191,7 @@ public partial class MainWindow : Window
     }
     private async void UpdateMeter()
     {
+        UpdateInstallState();
         if (changingRoute)
         {
             if (startingRoute) StatusDetail.Text = bridge.StartupStage;

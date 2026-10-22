@@ -22,6 +22,16 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Length == 2 && e.Args[0] == "--apply-update")
+        {
+            RunUpdateWorker(e.Args[1]);
+            return;
+        }
+        if (e.Args.Length == 2 && e.Args[0] == "--update-tests")
+        {
+            RunUpdateTests(e.Args[1]);
+            return;
+        }
         if (e.Args.Length == 2 && e.Args[0] == "--write-licenses")
         {
             try { File.WriteAllText(e.Args[1], LicenseNotices.ReadAll()); Shutdown(0); }
@@ -101,6 +111,14 @@ public partial class App : System.Windows.Application
                         bitmap.Render(window);
                         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                         using (var file = File.Create(e.Args[1])) encoder.Save(file);
+                        window.UpdatePopup.IsOpen = true;
+                        window.UpdatePopup.Child.UpdateLayout();
+                        var updatePanel = (FrameworkElement)window.UpdatePopup.Child;
+                        var updateBitmap = new RenderTargetBitmap((int)Math.Ceiling(updatePanel.ActualWidth), (int)Math.Ceiling(updatePanel.ActualHeight), 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        updateBitmap.Render(updatePanel);
+                        var updateEncoder = new PngBitmapEncoder(); updateEncoder.Frames.Add(BitmapFrame.Create(updateBitmap));
+                        using (var file = File.Create(e.Args[1] + ".updates.png")) updateEncoder.Save(file);
+                        window.UpdatePopup.IsOpen = false;
                         // Exercise the close-to-tray contract without saving test settings.
                         window.CloseButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
                         if (window.IsVisible || window.ShowInTaskbar) throw new Exception("Tray window visibility contract failed.");
@@ -129,6 +147,7 @@ public partial class App : System.Windows.Application
         menu.Items.Add("Open Guitar Bridge", null, (_, _) => ShowSettings());
         var route = menu.Items.Add("Start routing", null, (_, _) => window.ToggleRouting());
         menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add("Check for updates", null, async (_, _) => await window.OpenUpdatesAsync());
         menu.Items.Add("Open-source licenses", null, (_, _) =>
         {
             try { LicenseNotices.Show(); }
@@ -153,13 +172,29 @@ public partial class App : System.Windows.Application
             };
             checkTimer.Start();
         }
-        else if (Array.IndexOf(e.Args, "--no-auto-start") < 0) window.StartSavedRoute();
+        else
+        {
+            window.StartUpdateChecks();
+            if (Array.IndexOf(e.Args, "--no-auto-start") < 0) window.StartSavedRoute();
+        }
     }
 
     private async void RunAudioHost(string pipeName, bool testStopHang, bool testStartHang, string? startupTest = null)
     {
         try { await AudioHostServer.RunAsync(pipeName, testStopHang, testStartHang, startupTest); Environment.Exit(0); }
         catch { Environment.Exit(1); }
+    }
+
+    private async void RunUpdateWorker(string planPath)
+    {
+        try { await UpdateWorker.ApplyAsync(planPath); Shutdown(0); }
+        catch (Exception ex) { Forms.MessageBox.Show(ex.Message, "Guitar Bridge update failed", Forms.MessageBoxButtons.OK, Forms.MessageBoxIcon.Warning); Shutdown(1); }
+    }
+
+    private async void RunUpdateTests(string resultPath)
+    {
+        try { File.WriteAllText(resultPath, await UpdateTests.RunAsync()); Shutdown(0); }
+        catch (Exception ex) { File.WriteAllText(resultPath, ex.ToString()); Shutdown(1); }
     }
 
     private async void RunStartupProbe(string resultPath, bool shared, int? rate, bool defaultOutput)
@@ -200,6 +235,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        window?.CloseUpdateChecks();
         showWait?.Unregister(null);
         if (tray != null) { tray.Visible = false; tray.Dispose(); }
         icon?.Dispose();

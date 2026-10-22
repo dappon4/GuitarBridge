@@ -8,14 +8,30 @@
  <Grid Width="680" Height="500">
   <Grid.RowDefinitions><RowDefinition Height="60"/><RowDefinition Height="80"/><RowDefinition Height="260"/><RowDefinition Height="100"/></Grid.RowDefinitions>
   <Grid>
-   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <TextBlock Text="Guitar Bridge" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center" MouseLeftButtonDown="Title_Drag" ToolTip="Drag to move"/>
    <Button x:Name="RefreshButton" Grid.Column="1" Content="Refresh" Click="Refresh_Click" Style="{StaticResource MaterialDesignFlatButton}" ToolTip="Refresh audio devices" VerticalAlignment="Center" Margin="0,0,8,0"/>
    <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" AutomationProperties.Name="Setup and latency tips" ToolTipService.InitialShowDelay="200" ToolTipService.ShowDuration="120000">
     <md:PackIcon Kind="InformationOutline" Width="24" Height="24"/>
     <Button.ToolTip><ToolTip MaxWidth="430" Padding="16"><TextBlock TextWrapping="Wrap" Text="Enable the required inputs in your ASIO control panel. Scan channels and select the input you want to monitor. Keep the selected output device available to Windows.&#10;&#10;Try 128 samples in the ASIO panel and a 10 ms output target first. Lower to 64 samples / 5 ms if stable. If audio crackles, increase the buffers. Actual latency depends on the drivers; the displayed queue time is not an end-to-end measurement.&#10;&#10;Closing this window keeps audio running. Use the tray menu to stop or quit. Windows controls whether the icon appears inside the overflow arrow. A saved route can start automatically on later launches."/></ToolTip></Button.ToolTip>
    </Button>
-   <Button x:Name="CloseButton" Grid.Column="3" Style="{StaticResource MaterialDesignIconButton}" Click="Hide_Click" AutomationProperties.Name="Close to tray" ToolTip="Close to tray" Margin="4,0,0,0">
+   <Button x:Name="UpdateButton" Grid.Column="3" Style="{StaticResource MaterialDesignIconButton}" Click="Updates_Click" AutomationProperties.Name="App updates" ToolTip="App updates">
+    <Grid><md:PackIcon Kind="Download" Width="22" Height="22"/><Ellipse x:Name="UpdateBadge" Visibility="Collapsed" Fill="#B4D8CD" Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Top"/></Grid>
+   </Button>
+   <Popup x:Name="UpdatePopup" PlacementTarget="{Binding ElementName=UpdateButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+    <Border Background="#30283F" BorderBrush="#776A88" BorderThickness="1" CornerRadius="16" Padding="18" Margin="6">
+     <StackPanel Width="340">
+      <TextBlock Text="App updates" FontWeight="SemiBold" FontSize="18"/>
+      <TextBlock x:Name="UpdateVersionText" Foreground="#CAC4D0" FontSize="12" Margin="0,6,0,10"/>
+      <TextBlock x:Name="UpdateStatusText" Text="Check for a newer version on GitHub Releases." TextWrapping="Wrap"/>
+      <ProgressBar x:Name="UpdateProgress" Visibility="Collapsed" Minimum="0" Maximum="100" Height="4" Margin="0,12,0,0"/>
+      <CheckBox x:Name="AutomaticUpdates" Content="Check for updates automatically" IsChecked="True" Click="AutomaticUpdates_Click" Margin="0,14,0,8" ToolTip="Check on launch and every six hours. Downloads only start when you click Update and restart."/>
+      <Button x:Name="CheckUpdateButton" Content="Check for updates" Click="CheckUpdate_Click" Style="{StaticResource MaterialDesignFlatButton}"/>
+      <Button x:Name="InstallUpdateButton" Content="Update and restart" Visibility="Collapsed" Click="InstallUpdate_Click" Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,8,0,0" ToolTip="Stop routing before updating. Windows may request administrator permission for an MSI installation."/>
+     </StackPanel>
+    </Border>
+   </Popup>
+   <Button x:Name="CloseButton" Grid.Column="4" Style="{StaticResource MaterialDesignIconButton}" Click="Hide_Click" AutomationProperties.Name="Close to tray" ToolTip="Close to tray" Margin="4,0,0,0">
     <md:PackIcon Kind="Close" Width="22" Height="22"/>
    </Button>
   </Grid>

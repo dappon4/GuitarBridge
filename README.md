@@ -34,6 +34,12 @@ Drag the app heading to move the window. The close button hides the window and k
 
 Automatic routing starts the saved route when the app launches. It does not add the app to Windows startup.
 
+## Updates
+
+Open the download icon in the window header, or **Check for updates** in the tray menu. The app checks GitHub Releases on launch and every six hours; you can turn automatic checks off in that panel. A dot on the icon indicates a newer stable version.
+
+Click **Update and restart** while routing is stopped. The download runs in the background and is checked against the release's SHA-256 checksum and GitHub asset digest when available. Installed copies use the MSI (Windows may ask for administrator permission); portable copies replace their EXE in place. The app restarts afterward and preserves your settings. Offline or failed checks leave audio routing available. Updates are downloaded only after you click the button.
+
 ## Latency and recovery
 
 The buffer value is a request, not a guaranteed end-to-end latency. Total delay includes your source device, ASIO buffers, the bridge queue, Windows audio buffering, and output hardware. The queue time shown in the app measures only the bridge queue. Bluetooth output usually adds substantial delay.
@@ -50,6 +56,8 @@ If devices are unplugged or input channel mappings change, stop, refresh devices
 
 Settings are stored in %LOCALAPPDATA%\GuitarBridge\settings.json. Audio is not recorded or sent over a network.
 
+Update checks contact GitHub with the app version in the User-Agent. They do not send audio, device names, device identifiers, or saved settings. Downloads and temporary updater files use `%LOCALAPPDATA%\GuitarBridge\Updates`; old updater folders are cleaned up after seven days.
+
 The app starts in the notification area, without a taskbar button. It does not start routing until you enable it, unless you opt into automatic routing. No device names or identifiers are preconfigured.
 
 ## Build from source
@@ -57,14 +65,14 @@ The app starts in the notification area, without a taskbar button. It does not s
 Install the .NET 8 SDK on Windows, clone this repository, and run PowerShell in its folder:
 
 ```powershell
-./build.ps1 -Version 0.1.0
+./build.ps1
 ./scripts/test.ps1
-./scripts/package.ps1 -Version 0.1.0
+./scripts/package.ps1
 ```
 
 The published app is `artifacts/publish/GuitarBridge.exe`. Packaging creates the portable EXE, MSI, and SHA-256 checksums in `artifacts/release`. Build tools and dependencies restore automatically; no local SDK directory or audio hardware is required for the automated checks. See [development and release instructions](docs/DEVELOPING.md).
 
-GitHub Actions runs the same build and checks on pushes and pull requests. Pushing a version tag such as `v0.1.0` also creates a GitHub Release containing both downloads.
+GitHub Actions runs the same build and checks on pushes and pull requests. A new project version on `main`, or a version tag, creates a GitHub Release containing both downloads. Existing releases are never overwritten. See [code-signing options](docs/SIGNING.md) for trusted Windows signatures.
 
 The app uses .NET 8 WPF, NAudio 2.2.1, and MaterialDesignThemes 5.2.1 with Material Design 3 defaults. Dependency license notices are included in licenses.
 

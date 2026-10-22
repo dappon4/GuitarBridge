@@ -15,6 +15,7 @@ function Invoke-AppCheck([string]$Mode,[string]$File,[int]$TimeoutSeconds=60) {
 }
 Invoke-AppCheck '--self-test' (Join-Path $ResultsDirectory 'buffer-tests.txt')
 Invoke-AppCheck '--host-tests' (Join-Path $ResultsDirectory 'host-tests.txt')
+Invoke-AppCheck '--update-tests' (Join-Path $ResultsDirectory 'update-tests.txt')
 Invoke-AppCheck '--smoke-test' (Join-Path $ResultsDirectory 'window.png')
 $notices = Join-Path $ResultsDirectory 'embedded-licenses.txt'
 Invoke-AppCheck '--write-licenses' $notices
@@ -22,4 +23,4 @@ $licenseText = Get-Content -LiteralPath $notices -Raw
 foreach ($expected in @('GuitarBridge contributors','Mark Heath','James Willock','Microsoft')) {
     if (-not $licenseText.Contains($expected)) { throw "Standalone EXE is missing license notice: $expected" }
 }
-Write-Host 'PASS: buffer, host, window and standalone-license checks.'
+Write-Host 'PASS: buffer, host, updater, window and standalone-license checks.'

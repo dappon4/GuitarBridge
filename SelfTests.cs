@@ -71,11 +71,16 @@ public static class SelfTests
             await testWindow.StartRoutingAsync();
             if (!testWindow.IsRouting || testWindow.RouteButton.IsChecked != true)
                 throw new Exception("Window did not allow the selected ASIO input.");
+            testWindow.UpdateInstallState();
+            if (testWindow.InstallUpdateButton.IsEnabled || !Equals(testWindow.InstallUpdateButton.Content, "Stop routing to update"))
+                throw new Exception("An update could interrupt active routing.");
             if (testWindow.Volume.Maximum != 200 || testWindow.VolumeLabel.Text != "150%" || Math.Abs(testWindow.IsRouting ? testWindow.Volume.Value - 150 : 1) > 0.001)
                 throw new Exception("The boost control did not preserve the selected 150% output level.");
             const string originalError = "Original audio test error";
             testWindow.ShowError(originalError);
             await testWindow.StopRoutingAsync(originalError);
+            testWindow.UpdateInstallState();
+            if (!testWindow.InstallUpdateButton.IsEnabled) throw new Exception("Update controls did not recover after routing stopped.");
             if (!testWindow.RouteButton.IsEnabled || !testWindow.RefreshButton.IsEnabled || !testWindow.RouteSettings.IsEnabled || testWindow.RouteButton.IsChecked == true)
                 throw new Exception("Window controls remained disabled after stop timeout.");
             if (!testWindow.WarningPopupText.Text.Contains(originalError)) throw new Exception("Original error was lost during cleanup.");
