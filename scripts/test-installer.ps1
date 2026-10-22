@@ -2,6 +2,9 @@
 param([Parameter(Mandatory)][string]$MsiPath,[Parameter(Mandatory)][string]$PublishedExecutable)
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'This install/uninstall smoke test is restricted to disposable GitHub Actions runners.' }
+# PowerShell accepts forward slashes, but msiexec requires a native file path.
+$MsiPath = (Get-Item -LiteralPath $MsiPath -ErrorAction Stop).FullName
+$PublishedExecutable = (Get-Item -LiteralPath $PublishedExecutable -ErrorAction Stop).FullName
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $results = Join-Path $repoRoot 'artifacts\test-results'
 New-Item -ItemType Directory -Path $results -Force | Out-Null
@@ -14,7 +17,10 @@ $installed = $false
 try {
     $log = Join-Path $results 'msi-install.log'
     $process = Start-Process msiexec.exe -ArgumentList @('/i',('"{0}"' -f $MsiPath),'/qn','/norestart','/l*v',('"{0}"' -f $log)) -PassThru -Wait -WindowStyle Hidden
-    if ($process.ExitCode -notin @(0,3010)) { throw "MSI install failed: $($process.ExitCode). See $log" }
+    if ($process.ExitCode -notin @(0,3010)) {
+        if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log -Tail 80 }
+        throw "MSI install failed: $($process.ExitCode). See $log"
+    }
     $installed = $true
     if ((Get-FileHash -LiteralPath $installedExe).Hash -ne (Get-FileHash -LiteralPath $PublishedExecutable).Hash) { throw 'Installed EXE does not match the published EXE.' }
     foreach ($relative in @('LICENSE','README.md','THIRD_PARTY_NOTICES.md','licenses\NAudio.txt','licenses\MaterialDesign.txt')) {
@@ -26,7 +32,10 @@ try {
     if ($installed) {
         $log = Join-Path $results 'msi-uninstall.log'
         $process = Start-Process msiexec.exe -ArgumentList @('/x',('"{0}"' -f $MsiPath),'/qn','/norestart','/l*v',('"{0}"' -f $log)) -PassThru -Wait -WindowStyle Hidden
-        if ($process.ExitCode -notin @(0,3010)) { throw "MSI uninstall failed: $($process.ExitCode). See $log" }
+        if ($process.ExitCode -notin @(0,3010)) {
+            if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log -Tail 80 }
+            throw "MSI uninstall failed: $($process.ExitCode). See $log"
+        }
     }
 }
 if (Test-Path -LiteralPath $installedExe) { throw 'Uninstall left the installed application executable behind.' }
